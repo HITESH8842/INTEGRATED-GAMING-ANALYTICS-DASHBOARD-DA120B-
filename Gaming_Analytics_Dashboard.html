@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Integrated Gaming Analytics Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0A0D1C;
+    --panel:#121730;
+    --panel-2:#171D3B;
+    --line:#232B55;
+    --ink:#EAF0FF;
+    --muted:#8B96C4;
+    --cyan:#22D9EE;
+    --magenta:#F43F8E;
+    --lime:#A6E22E;
+    --amber:#FFB454;
+    --violet:#8B7BF4;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(1200px 500px at 80% -10%, rgba(139,123,244,.14), transparent 60%),
+      radial-gradient(900px 420px at 0% 110%, rgba(34,217,238,.10), transparent 55%),
+      var(--bg);
+    color:var(--ink);
+    font-family:'IBM Plex Sans',sans-serif;
+    min-height:100vh;
+    padding:28px clamp(16px,4vw,48px) 60px;
+  }
+  header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:22px}
+  .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;color:var(--cyan);margin-bottom:6px}
+  h1{font-family:'Chakra Petch',sans-serif;font-size:clamp(1.4rem,3vw,2.1rem);font-weight:700;line-height:1.1}
+  h1 span{color:var(--magenta)}
+  .meta{font-size:.8rem;color:var(--muted);text-align:right;line-height:1.5}
+
+  nav{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:26px}
+  nav button{
+    font-family:'Chakra Petch',sans-serif;font-weight:600;font-size:.9rem;
+    padding:10px 22px;border-radius:999px;border:1px solid var(--line);
+    background:var(--panel);color:var(--muted);cursor:pointer;transition:all .18s;
+  }
+  nav button:hover{border-color:var(--cyan);color:var(--ink)}
+  nav button.active{background:linear-gradient(120deg,rgba(34,217,238,.18),rgba(244,63,142,.18));border-color:var(--cyan);color:var(--ink);box-shadow:0 0 18px rgba(34,217,238,.25)}
+  nav button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+
+  .page{display:none;animation:fade .25s ease}
+  .page.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:18px}
+  .kpi{
+    background:linear-gradient(160deg,var(--panel-2),var(--panel));
+    border:1px solid var(--line);border-radius:14px;padding:16px 18px;position:relative;overflow:hidden;
+  }
+  .kpi::after{content:"";position:absolute;inset:auto 0 0 0;height:3px;background:var(--accent,var(--cyan))}
+  .kpi .label{font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+  .kpi .value{font-family:'Chakra Petch',sans-serif;font-size:1.9rem;font-weight:700}
+  .kpi .sub{font-size:.75rem;color:var(--muted);margin-top:4px}
+
+  .grid{display:grid;gap:14px;grid-template-columns:repeat(12,1fr)}
+  .card{
+    background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;
+    grid-column:span 6;min-height:320px;display:flex;flex-direction:column;
+  }
+  .card.wide{grid-column:span 12}
+  .card h2{font-family:'Chakra Petch',sans-serif;font-size:.95rem;font-weight:600;margin-bottom:2px}
+  .card .q{font-size:.74rem;color:var(--muted);margin-bottom:12px}
+  .chart-wrap{position:relative;flex:1;min-height:230px}
+
+  .insight{
+    margin-top:12px;font-size:.78rem;color:var(--muted);border-left:3px solid var(--lime);
+    padding:6px 10px;background:rgba(166,226,46,.06);border-radius:0 8px 8px 0;
+  }
+  .insight b{color:var(--lime);font-weight:600}
+
+  footer{margin-top:26px;font-size:.72rem;color:var(--muted);line-height:1.6;border-top:1px solid var(--line);padding-top:14px}
+
+  @media (max-width:820px){
+    .card{grid-column:span 12}
+    .meta{text-align:left}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .page{animation:none}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="eyebrow">MSc Data Science · Final Project</div>
+    <h1>Integrated Gaming <span>Analytics</span> Dashboard</h1>
+  </div>
+  <div class="meta">
+    Datasets: games.csv · steam.csv · steam_description_data.csv · vgsales.csv<br>
+    122,611 records merged &amp; cleaned in Python · Visualised in Power BI
+  </div>
+</header>
+
+<nav role="tablist">
+  <button class="active" data-page="overview" role="tab">1 · Overview</button>
+  <button data-page="engagement" role="tab">2 · Engagement</button>
+  <button data-page="sales" role="tab">3 · Sales &amp; Publishers</button>
+</nav>
+
+<!-- ============ PAGE 1: OVERVIEW ============ -->
+<section id="overview" class="page active">
+  <div class="kpis">
+    <div class="kpi" style="--accent:var(--cyan)"><div class="label">Total Games</div><div class="value">123K</div><div class="sub">after cleaning &amp; merging</div></div>
+    <div class="kpi" style="--accent:var(--magenta)"><div class="label">Total Sales</div><div class="value">613.98M</div><div class="sub">global units (vgsales)</div></div>
+    <div class="kpi" style="--accent:var(--lime)"><div class="label">Avg Peak CCU</div><div class="value">54.59</div><div class="sub">concurrent users per game</div></div>
+    <div class="kpi" style="--accent:var(--amber)"><div class="label">Avg Price</div><div class="value">$4.77</div><div class="sub">across all price bands</div></div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Games Released per Year</h2>
+      <div class="q">Market growth — release volume over time</div>
+      <div class="chart-wrap"><canvas id="cYear"></canvas></div>
+      <div class="insight"><b>Insight:</b> release volume accelerates sharply after 2014, peaking in 2024–2025 — the indie publishing boom on Steam.</div>
+    </div>
+    <div class="card">
+      <h2>Game Count by Primary Genre</h2>
+      <div class="q">Which genres dominate the catalogue?</div>
+      <div class="chart-wrap"><canvas id="cGenreCount"></canvas></div>
+      <div class="insight"><b>Insight:</b> Action and Adventure dominate supply — but catalogue size ≠ revenue (see page 3).</div>
+    </div>
+    <div class="card wide">
+      <h2>Catalogue Split by Price Band</h2>
+      <div class="q">Free · Low · Medium · Premium segmentation (engineered feature)</div>
+      <div class="chart-wrap"><canvas id="cPriceBand"></canvas></div>
+      <div class="insight"><b>Insight:</b> the market is bottom-heavy — most titles sit in the Free and Low bands, consistent with the $4.77 average price.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PAGE 2: ENGAGEMENT ============ -->
+<section id="engagement" class="page">
+  <div class="grid">
+    <div class="card">
+      <h2>Playtime by Price Band</h2>
+      <div class="q">Sum of avg playtime (forever vs last 2 weeks)</div>
+      <div class="chart-wrap"><canvas id="cPlaytime"></canvas></div>
+      <div class="insight"><b>Insight:</b> Low-priced games accumulate the most total playtime — accessibility drives engagement volume.</div>
+    </div>
+    <div class="card">
+      <h2>Peak CCU: Multiplayer vs Single-player</h2>
+      <div class="q">Does multiplayer drive concurrency?</div>
+      <div class="chart-wrap"><canvas id="cMulti"></canvas></div>
+      <div class="insight"><b>Insight:</b> multiplayer titles retain players ≈<b>1.74×</b> longer and dominate peak concurrent users.</div>
+    </div>
+    <div class="card wide">
+      <h2>Ownership Leaders (Peak CCU by Publisher)</h2>
+      <div class="q">Who commands the largest live audiences?</div>
+      <div class="chart-wrap"><canvas id="cOwners"></canvas></div>
+      <div class="insight"><b>Insight:</b> Valve leads ownership at ≈<b>1.75M</b>, far ahead of the next publishers — platform owners win engagement.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PAGE 3: SALES & PUBLISHERS ============ -->
+<section id="sales" class="page">
+  <div class="grid">
+    <div class="card">
+      <h2>Global Sales by Genre</h2>
+      <div class="q">Which genres actually sell?</div>
+      <div class="chart-wrap"><canvas id="cSalesGenre"></canvas></div>
+      <div class="insight"><b>Insight:</b> Action leads global sales; in Japan, Role-Playing outsells Action roughly <b>2:1</b> — regional taste matters.</div>
+    </div>
+    <div class="card">
+      <h2>Top Publishers by Global Sales</h2>
+      <div class="q">Publisher market share</div>
+      <div class="chart-wrap"><canvas id="cPublisher"></canvas></div>
+      <div class="insight"><b>Insight:</b> Nintendo leads with a wide margin over Electronic Arts and Activision.</div>
+    </div>
+    <div class="card wide">
+      <h2>Regional Sales Mix by Platform</h2>
+      <div class="q">NA · EU · JP · Other, stacked per platform</div>
+      <div class="chart-wrap"><canvas id="cPlatform"></canvas></div>
+      <div class="insight"><b>Insight:</b> PS2 leads lifetime platform sales; X360 and Wii skew heavily to North America, while JP share concentrates on Nintendo/Sony handhelds.</div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  Interactive companion to the Power BI report (POWER_BI_DASHBOARD.pdf). Chart values reproduce the aggregates from the Power BI export; where the PDF shows chart shapes without exact axis labels, values are proportional approximations — verify exact figures against the live .pbix before quoting them in the viva. Built for: Integrated Gaming Analytics Dashboard, supervised by Prof. Dr. Farhan Khan.
+</footer>
+
+<script>
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const C = {cyan:css('--cyan'),magenta:css('--magenta'),lime:css('--lime'),amber:css('--amber'),violet:css('--violet'),muted:css('--muted'),line:css('--line'),ink:css('--ink')};
+
+Chart.defaults.color = C.muted;
+Chart.defaults.font.family = "'IBM Plex Sans', sans-serif";
+Chart.defaults.borderColor = C.line;
+Chart.defaults.plugins.legend.labels.boxWidth = 12;
+
+const gridOpts = {grid:{color:'rgba(35,43,85,.6)'},ticks:{color:C.muted}};
+
+// ---- Page 1 ----
+new Chart(cYear,{type:'bar',data:{
+  labels:['2010','2011','2012','2013','2014','2015','2016','2017','2018','2019','2020','2021','2022','2023','2024','2025'],
+  datasets:[{label:'Games released',data:[420,560,780,1100,1900,3200,4900,6800,8600,9200,10400,12100,13800,15600,18900,20300],
+    backgroundColor:ctx=>ctx.raw>15000?C.magenta:C.cyan,borderRadius:4}]},
+  options:{plugins:{legend:{display:false}},scales:{x:gridOpts,y:gridOpts},maintainAspectRatio:false}});
+
+new Chart(cGenreCount,{type:'bar',data:{
+  labels:['Action','Adventure','Casual','Indie','Unknown','Simulation','RPG','Strategy','Free To Play','Racing'],
+  datasets:[{label:'Game count',data:[52000,31000,24000,21000,17000,14500,12800,11200,6400,4100],
+    backgroundColor:C.cyan,borderRadius:4}]},
+  options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:gridOpts,y:gridOpts},maintainAspectRatio:false}});
+
+new Chart(cPriceBand,{type:'doughnut',data:{
+  labels:['Free','Low','Medium','Premium'],
+  datasets:[{data:[38,34,19,9],backgroundColor:[C.lime,C.cyan,C.violet,C.magenta],borderColor:css('--panel'),borderWidth:3}]},
+  options:{cutout:'62%',plugins:{legend:{position:'right'}},maintainAspectRatio:false}});
+
+// ---- Page 2 ----
+new Chart(cPlaytime,{type:'bar',data:{
+  labels:['Low','Free','Medium','Premium'],
+  datasets:[
+    {label:'Playtime forever',data:[9.6,7.1,4.8,2.3],backgroundColor:C.cyan,borderRadius:4},
+    {label:'Playtime last 2 weeks',data:[1.4,1.1,0.7,0.3],backgroundColor:C.magenta,borderRadius:4}]},
+  options:{scales:{x:gridOpts,y:{...gridOpts,title:{display:true,text:'Million minutes',color:C.muted}}},maintainAspectRatio:false}});
+
+new Chart(cMulti,{type:'bar',data:{
+  labels:['Multiplayer','Single-player'],
+  datasets:[{label:'Peak CCU (millions)',data:[4.9,1.8],backgroundColor:[C.magenta,C.cyan],borderRadius:6,barPercentage:.55}]},
+  options:{plugins:{legend:{display:false}},scales:{x:gridOpts,y:gridOpts},maintainAspectRatio:false}});
+
+new Chart(cOwners,{type:'bar',data:{
+  labels:['Valve','Rockstar','PUBG Corp','Smartly Dressed','Facepunch','Re-Logic','Amazon Games','miHoYo'],
+  datasets:[{label:'Peak ownership (K)',data:[1750,820,610,480,410,360,330,300],backgroundColor:C.lime,borderRadius:4}]},
+  options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:gridOpts,y:gridOpts},maintainAspectRatio:false}});
+
+// ---- Page 3 ----
+new Chart(cSalesGenre,{type:'bar',data:{
+  labels:['Action','Sports','Shooter','Role-Playing','Platform','Misc','Racing','Fighting','Simulation','Puzzle','Adventure','Strategy'],
+  datasets:[{label:'Global sales (M units)',data:[121,91,72,64,57,55,50,31,27,17,16,12],backgroundColor:C.magenta,borderRadius:4}]},
+  options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:gridOpts,y:gridOpts},maintainAspectRatio:false}});
+
+new Chart(cPublisher,{type:'bar',data:{
+  labels:['Nintendo','Electronic Arts','Activision','Sony','Ubisoft','Take-Two','THQ','Konami','Sega','Namco Bandai'],
+  datasets:[{label:'Global sales (M units)',data:[118,76,49,43,31,27,23,19,18,17],backgroundColor:C.amber,borderRadius:4}]},
+  options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:gridOpts,y:gridOpts},maintainAspectRatio:false}});
+
+new Chart(cPlatform,{type:'bar',data:{
+  labels:['PS2','X360','Wii','PS3','DS','PS','GBA','PS4','PSP','PC'],
+  datasets:[
+    {label:'NA',data:[40,42,32,25,23,21,12,10,4,9],backgroundColor:C.cyan},
+    {label:'EU',data:[24,19,18,22,13,15,6,12,3,8],backgroundColor:C.magenta},
+    {label:'JP',data:[14,1,8,6,14,9,5,2,7,0.5],backgroundColor:C.lime},
+    {label:'Other',data:[8,6,6,8,5,5,2,4,1,2],backgroundColor:C.violet}]},
+  options:{scales:{x:{...gridOpts,stacked:true},y:{...gridOpts,stacked:true,title:{display:true,text:'Sales (M units)',color:C.muted}}},maintainAspectRatio:false}});
+
+// ---- Tabs ----
+document.querySelectorAll('nav button').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.page).classList.add('active');
+  });
+});
+</script>
+</body>
+</html>
